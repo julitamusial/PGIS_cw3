@@ -2,12 +2,14 @@
 import urllib
 import json
 from pprint import *
+
 #URL
-wroclaw ='http://api.openweathermap.org/data/2.5/group?id=3096053,3081368,3093692,3097257,3102987,3082707,3099828,3084093,3092931,3103096,3090205,3083103,3084404,3080231,3090170,3097367,3099213&units=metric'
-#print wroclaw
+request ='http://api.openweathermap.org/data/2.5/group?units=metric&id=3096053,3081368,3093692,3097257,3102987,3082707,3099828,3084093,3092931,3103096,3090205,3083103,3084404,3080231,3090170,3097367,3099213'
+
+#print request
 
 #drukuje plik json
-wroclaw2 = urllib.urlopen(wroclaw)
+wroclaw2 = urllib.urlopen(request)
 plik = json.load(wroclaw2)
 with open("wroclaw_dump.json", 'w') as update:
     mf = json.dump(plik, update)
@@ -65,3 +67,13 @@ for i in range(0, len(pogoda)):
     prognozaDict = [miasto,wspolrzedne,temp,tempMax,tempMin,cisnienie,wilgotnosc,predkoscWiatru,kierWiatru,chmury]
     prognozaPog.append(prognozaDict)
 print prognozaPog
+
+#wspolrzedne
+wsp = []
+for j in range(0, len(prognozaPog)):
+    wsp.append(prognozaPog[j][1])
+    wsp2 = tuple(wsp)
+print wsp2
+
+#a = prognozaPog[1][1]
+#print a
