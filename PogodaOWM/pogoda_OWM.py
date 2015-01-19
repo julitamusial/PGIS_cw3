@@ -198,7 +198,7 @@ class PogodaOWM:
 
 #wczytane wojewodztwa
 wojewodztwa= QgsVectorLayer('C:/Users/Jula/.qgis2/python/plugins/PogodaOWM/shapefile/admin_region_teryt_woj.shp','wojewodztwa','ogr')
-            
+#QgsMapLayerRegistry.instance().addMapLayer(wojewodztwa)
 #wartstwa z pogoda
 wPogoda = QgsVectorLayer('Point', 'pogodaOWM', 'memory')
 wPogoda.LayerData = wPogoda.dataProvider()
@@ -263,7 +263,7 @@ else:
         
         
 #tablica parametrów pogody, pod nazwą klucza 'list'
-pogoda = plik["list"]
+pogoda = mf["list"]
 # pprint(pogoda)
 
 #potem biorę sobie pierwszy obiekt
@@ -302,7 +302,8 @@ for i in range(0, len(pogoda)):
            
 #slownik do wpisania wspolrzednych
     dict[miasta[i]] = miastoLat[i]
-#print prognozaPog
+for i in prognozaPog:
+    print prognozaPog
 #print miasta
 #print miastoLat
 #print dict
@@ -313,7 +314,7 @@ wPogoda.startEditing()
 for i in range(0, len(pogoda)):
     obiekt = QgsFeature()
     obiekt.setGeometry(QgsGeometry.fromPoint(QgsPoint(wspLat, wspLon)))
-    obiekt.setAttributes([miasto,2,2,2,2,2,2,2,2])
+    obiekt.setAttributes(prognozaPog[i])
     wPogoda.addFeature(obiekt)
 wPogoda.commitChanges()
 wPogoda.updateExtents()
