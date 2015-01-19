@@ -34,6 +34,7 @@ import qgis.utils
 from qgis.gui import QgsMessageBar
 
 import urllib, json
+import datetime
 from pprint import pprint
 
 class PogodaOWM:
@@ -194,22 +195,42 @@ class PogodaOWM:
         # See if OK was pressed
         if result:
             pass
+
+#wczytane wojewodztwa
+wojewodztwa= QgsVectorLayer('C:/Users/Jula/.qgis2/python/plugins/PogodaOWM/shapefile/admin_region_teryt_woj.shp','wojewodztwa','ogr')
             
-        #wczytane wojewodztwa
-        wojewodztwa= QgsVectorLayer('C:/Users/Jula/.qgis2/python/plugins/PogodaOWM/shapefile/admin_region_teryt_woj.shp','wojewodztwa','ogr')
-            
-        #wartstwa z pogoda
-        wPogoda = QgsVectorLayer('Point', 'pogodaOWM', 'memory')
-        wPogoda.LayerData = wPogoda.dataProvider()
-        wPogoda.startEditing()
-#        wPogoda2.setCrs(QgsCoordinateReferenceSystem(4326))
+#wartstwa z pogoda
+wPogoda = QgsVectorLayer('Point', 'pogodaOWM', 'memory')
+wPogoda.LayerData = wPogoda.dataProvider()
+wPogoda.startEditing()
+#wPogoda2.setCrs(QgsCoordinateReferenceSystem(4326))
         
             
-        #Dodanie nowych pol do wartwy Pogodowej            
-        wPogoda.LayerData.addAttributes([QgsField('Miasto', QVariant.String), QgsField('Temp', QVariant.Int), QgsField('TempMin', QVariant.Int), QgsField('TempMax', QVariant.Int), QgsField('Cisnienie', QVariant.Double), QgsField('Wilgotnosc', QVariant.Double), QgsField('PredkWiatru', QVariant.Double), QgsField('KierWiatru', QVariant.Double), QgsField('Chmury', QVariant.Int)])
-        wPogoda.updateFields()
-        wPogoda.commitChanges()
+#Dodanie nowych pol do wartwy Pogodowej            
+wPogoda.LayerData.addAttributes([QgsField('Miasto', QVariant.String), QgsField('Temp', QVariant.Int), QgsField('TempMin', QVariant.Int), QgsField('TempMax', QVariant.Int), QgsField('Cisnienie', QVariant.Double), QgsField('Wilgotnosc', QVariant.Double), QgsField('PredkWiatru', QVariant.Double), QgsField('KierWiatru', QVariant.Double), QgsField('Chmury', QVariant.Int)])
+wPogoda.updateFields()
+wPogoda.commitChanges()
        
+if os.path.exists('wroclaw_dump.json'):
+    biezacyCzas = datetime.datetime.now()
+    print biezacyCzas, 'biezacy czas'
+            
+#sprawdzenie czasu pliku wroclaw_dump.json
+    czasPlikuSys = os.path.getmtime('wroclaw_dump.json')
+    print czasPlikuSys, 'czas pliku systemowy'
+    czasPliku=datetime.datetime.fromtimestamp(czasPlikuSys)
+    print czasPliku, ' czas pliku'
+
+    roznicaCzasow = (biezacyCzas - czasPliku).seconds
+    print roznicaCzasow, 'roznica czasow w sekundach'
+    
+    if roznicaCzasow<100:
+        print "Import z pliku"
+        with open ('wroclaw_dump.json', 'r') as current:
+            mf = json.load(current)
+    
+    else:
+        print "Pobieranie danych z serwisu OWM"
         #URL
         request ='http://api.openweathermap.org/data/2.5/group?units=metric&id=3096053,3081368,3093692,3097257,3102987,3082707,3099828,3084093,3092931,3103096,3090205,3083103,3084404,3080231,3090170,3097367,3099213'
         #print request
@@ -219,45 +240,81 @@ class PogodaOWM:
         plik = json.load(wroclaw2)
         with open("wroclaw_dump.json", 'w') as update:
             mf = json.dump(plik, update)
+            #print plik
+            wroclaw2.close()
+                
+        #pprint(plik)
+            
+else:
+    print "Plik nie istnieje na dysku - pobrano z OWM"
+    #URL
+    request ='http://api.openweathermap.org/data/2.5/group?units=metric&id=3096053,3081368,3093692,3097257,3102987,3082707,3099828,3084093,3092931,3103096,3090205,3083103,3084404,3080231,3090170,3097367,3099213'
+    #print request
+
+    #drukuje plik json
+    wroclaw2 = urllib.urlopen(request)
+    plik = json.load(wroclaw2)
+    with open("wroclaw_dump.json", 'w') as update:
+        mf = json.dump(plik, update)
         #print plik
         wroclaw2.close()
+                
+    #pprint(plik)   
+        
+        
+#tablica parametrów pogody, pod nazwą klucza 'list'
+pogoda = plik["list"]
+# pprint(pogoda)
 
-        #pprint(plik)
+#potem biorę sobie pierwszy obiekt
+wrocek = pogoda[0]
+#print wr
 
-        #tablica parametrów pogody, pod nazwą klucza 'list'
-        pogoda = plik["list"]
-#        pprint(pogoda)
+#pętla do zapisu danych do tablicy
+prognozaPog = []
+miasta = []
+miastoLat = []
+dict = {}
 
-        #potem biorę sobie pierwszy obiekt
-        wrocek = pogoda[0]
-        #print wr
-
-        #pętla do zapisu danych do tablicy
-        prognozaPog = []
-        for i in range(0, len(pogoda)):
-            miasto = pogoda[i]['name']
-            wspLat = pogoda[i]['coord']['lat']
-            wspLon = pogoda[i]['coord']['lon']
-            temp = pogoda[i]['main']['temp']
-            tempMax = pogoda[i]['main']['temp_max']
-            tempMin = pogoda[i]['main']['temp_min']
-            cisnienie = pogoda[i]['main']['pressure']
-            wilgotnosc = pogoda[i]['main']['humidity']
-            predkoscWiatru = pogoda[i]['wind']['speed']
-            kierWiatru = pogoda[i]['wind']['deg']
-            chmury = pogoda[i]['clouds']['all']
-        #   opisPogody = pogoda[i]['weather']['desciption']
-        #   ikonaPogody = pogoda[i]['weather']['main']
+for i in range(0, len(pogoda)):
+    miasto = pogoda[i]['name']
+    wspLat = pogoda[i]['coord']['lat']
+    wspLon = pogoda[i]['coord']['lon']
+    temp = pogoda[i]['main']['temp']
+    tempMax = pogoda[i]['main']['temp_max']
+    tempMin = pogoda[i]['main']['temp_min']
+    cisnienie = pogoda[i]['main']['pressure']
+    wilgotnosc = pogoda[i]['main']['humidity']
+    predkoscWiatru = pogoda[i]['wind']['speed']
+    kierWiatru = pogoda[i]['wind']['deg']
+    chmury = pogoda[i]['clouds']['all']
+# opisPogody = pogoda[i]['weather']['desciption']
+#ikonaPogody = pogoda[i]['weather']['main']
                 
 
-            prognozaDict = [miasto,wspLat,wspLon,temp,tempMax,tempMin,cisnienie,wilgotnosc,predkoscWiatru,kierWiatru,chmury]
-            prognozaPog.append(prognozaDict)
-        print prognozaPog
+    prognozaDict = [miasto,temp,tempMax,tempMin,cisnienie,wilgotnosc,predkoscWiatru,kierWiatru,chmury]
+    prognozaPog.append(prognozaDict)
+
+    miastaWsp = [wspLon, wspLat]
+            
+    miasta.append(miasto)
+    miastoLat.append(miastaWsp)
+           
+#slownik do wpisania wspolrzednych
+    dict[miasta[i]] = miastoLat[i]
+#print prognozaPog
+#print miasta
+#print miastoLat
+#print dict
+
         
-        for i in range(0, len(pogoda)):
-            obiekt = QgsFeature()
-            obiekt.setGeometry(QgsGeometry.fromPoint(QgsPoint(10,10)))
-            #obiekt.setAttributeMap({0: QVariant('Wroclaw'), 1: QVariant(20)})
-            wPogoda.addFeatures([obiekt])
-            wPogoda.commitChanges()
-        QgsMapLayerRegistry.instance().addMapLayer(wPogoda)
+#Dodawanie atrybutow obiektow w wartstwie
+wPogoda.startEditing()
+for i in range(0, len(pogoda)):
+    obiekt = QgsFeature()
+    obiekt.setGeometry(QgsGeometry.fromPoint(QgsPoint(wspLat, wspLon)))
+    obiekt.setAttributes([miasto,2,2,2,2,2,2,2,2])
+    wPogoda.addFeature(obiekt)
+wPogoda.commitChanges()
+wPogoda.updateExtents()
+QgsMapLayerRegistry.instance().addMapLayer(wPogoda)
